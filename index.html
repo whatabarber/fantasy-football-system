@@ -1062,26 +1062,31 @@ async function authenticateAsTeam9() {
     }
 }
 
-// Fetch My Team Data
+// Fetch My Team Data - CORS FIXED VERSION
 async function fetchMyTeamData() {
     const url = `${ESPN_CONFIG.apiBase}${ESPN_CONFIG.leagueId}?view=mTeam&view=mRoster`;
     
-    const response = await fetch(url, {
+    // Use CORS proxy to bypass browser restrictions
+    const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+    
+    const response = await fetch(proxyUrl, {
+        method: 'POST',
         headers: {
-            'Cookie': `espn_s2=${espnAuth.espn_s2}; SWID=${espnAuth.swid}`,
-            'X-Fantasy-Filter': JSON.stringify({
-                "teams": {
-                    "filterTeam": {
-                        "value": [ESPN_CONFIG.teamId]
-                    }
-                }
-            })
-        }
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            url: url,
+            headers: {
+                'Cookie': `espn_s2=${espnAuth.espn_s2}; SWID=${espnAuth.swid}`,
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+        })
     });
     
     if (!response.ok) throw new Error('Failed to fetch team data');
     
-    const data = await response.json();
+    const proxyData = await response.json();
+    const data = JSON.parse(proxyData.contents);
     return data.teams ? data.teams.find(team => team.id === ESPN_CONFIG.teamId) : null;
 }
 
@@ -1118,32 +1123,30 @@ async function testTeamAuth() {
     }
 }
 
-// Fetch My Roster
+// Fetch My Roster - CORS FIXED VERSION
 async function fetchMyRoster() {
     const url = `${ESPN_CONFIG.apiBase}${ESPN_CONFIG.leagueId}?view=mRoster&view=mTeam`;
+    const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
     
-    const response = await fetch(url, {
-        headers: {
-            'Cookie': `espn_s2=${espnAuth.espn_s2}; SWID=${espnAuth.swid}`
-        }
-    });
+    const response = await fetch(proxyUrl);
+    if (!response.ok) throw new Error('Failed to fetch roster');
     
-    const data = await response.json();
+    const proxyData = await response.json();
+    const data = JSON.parse(proxyData.contents);
     const myTeam = data.teams?.find(team => team.id === ESPN_CONFIG.teamId);
     return myTeam?.roster || null;
 }
 
-// Fetch Draft Status
+// Fetch Draft Status - CORS FIXED VERSION
 async function fetchDraftStatus() {
     const url = `${ESPN_CONFIG.apiBase}${ESPN_CONFIG.leagueId}?view=mDraftDetail`;
+    const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
     
-    const response = await fetch(url, {
-        headers: {
-            'Cookie': `espn_s2=${espnAuth.espn_s2}; SWID=${espnAuth.swid}`
-        }
-    });
+    const response = await fetch(proxyUrl);
+    if (!response.ok) throw new Error('Failed to fetch draft status');
     
-    const data = await response.json();
+    const proxyData = await response.json();
+    const data = JSON.parse(proxyData.contents);
     return data.draftDetail || null;
 }
 
