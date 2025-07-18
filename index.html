@@ -939,6 +939,395 @@ window.ESPN_Integration = {
     getDraftBoard: () => draftBoard,
     getRecommendations: getSmartDraftRecommendations
 };
+        // ESPN Enhanced Authentication - Team Integration
+// League ID: 1505348419, Team ID: 9
+
+// Enhanced ESPN Configuration
+const ESPN_CONFIG = {
+    leagueId: '1505348419',
+    teamId: 9,
+    seasonId: 2025,
+    apiBase: 'https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/2025/segments/0/leagues/'
+};
+
+// Authentication state
+let espnAuth = {
+    espn_s2: '',
+    swid: '',
+    isAuthenticated: false,
+    userTeam: null
+};
+
+// Enhanced Authentication UI
+function addEnhancedESPNAuth() {
+    const authSection = `
+        <div class="mt-6 p-4 bg-green-50 rounded-lg">
+            <h3 class="text-lg font-semibold mb-4">🔐 Enhanced ESPN Authentication</h3>
+            <div class="space-y-4">
+                <div class="bg-blue-100 p-3 rounded">
+                    <p class="text-sm"><strong>Your League:</strong> 1505348419</p>
+                    <p class="text-sm"><strong>Your Team:</strong> Team 9</p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">ESPN_S2 Cookie (Required)</label>
+                    <input id="enhancedEspnS2" type="password" class="w-full p-2 border rounded-lg" 
+                           placeholder="Paste your ESPN_S2 cookie here">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">SWID Cookie (Required)</label>
+                    <input id="enhancedSwid" type="password" class="w-full p-2 border rounded-lg" 
+                           placeholder="Paste your SWID cookie here">
+                </div>
+                
+                <div class="flex space-x-2">
+                    <button onclick="authenticateAsTeam9()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                        🔐 Login as Team 9
+                    </button>
+                    <button onclick="testTeamAuth()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                        🧪 Test My Access
+                    </button>
+                    <button onclick="openMockDraft()" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+                        🎯 Open Mock Draft
+                    </button>
+                </div>
+                
+                <div id="enhancedAuthStatus" class="text-sm"></div>
+            </div>
+            
+            <div class="mt-4 p-3 bg-yellow-50 rounded">
+                <h4 class="font-medium text-sm mb-2">🍪 How to Get Your Cookies:</h4>
+                <ol class="text-xs text-gray-600 space-y-1">
+                    <li>1. Open ESPN Fantasy in new tab</li>
+                    <li>2. Login to your account</li>
+                    <li>3. Press F12 → Application tab → Cookies → espn.com</li>
+                    <li>4. Find "espn_s2" and copy its Value</li>
+                    <li>5. Find "SWID" and copy its Value</li>
+                    <li>6. Paste both here and click "Login as Team 9"</li>
+                </ol>
+            </div>
+        </div>
+    `;
+    
+    // Add to settings panel
+    const settings = document.getElementById('settings');
+    if (settings) {
+        settings.insertAdjacentHTML('beforeend', authSection);
+    }
+}
+
+// Authenticate as Team 9
+async function authenticateAsTeam9() {
+    const espnS2 = document.getElementById('enhancedEspnS2').value.trim();
+    const swid = document.getElementById('enhancedSwid').value.trim();
+    
+    if (!espnS2 || !swid) {
+        showEnhancedStatus('❌ Please enter both ESPN_S2 and SWID cookies', 'error');
+        return;
+    }
+    
+    espnAuth.espn_s2 = espnS2;
+    espnAuth.swid = swid;
+    
+    try {
+        showEnhancedStatus('🔄 Authenticating as Team 9...', 'loading');
+        
+        // Test authentication by fetching team data
+        const teamData = await fetchMyTeamData();
+        
+        if (teamData) {
+            espnAuth.isAuthenticated = true;
+            espnAuth.userTeam = teamData;
+            
+            // Save auth to localStorage for persistence
+            localStorage.setItem('espn_team_auth', JSON.stringify({
+                espn_s2: espnS2,
+                swid: swid,
+                leagueId: ESPN_CONFIG.leagueId,
+                teamId: ESPN_CONFIG.teamId,
+                authenticated: true,
+                timestamp: Date.now()
+            }));
+            
+            showEnhancedStatus(`✅ Successfully logged in as ${teamData.location} ${teamData.nickname}!`, 'success');
+            enableTeamFeatures();
+        } else {
+            throw new Error('Failed to fetch team data');
+        }
+        
+    } catch (error) {
+        console.error('Authentication failed:', error);
+        showEnhancedStatus('❌ Authentication failed. Check your cookies and try again.', 'error');
+    }
+}
+
+// Fetch My Team Data
+async function fetchMyTeamData() {
+    const url = `${ESPN_CONFIG.apiBase}${ESPN_CONFIG.leagueId}?view=mTeam&view=mRoster`;
+    
+    const response = await fetch(url, {
+        headers: {
+            'Cookie': `espn_s2=${espnAuth.espn_s2}; SWID=${espnAuth.swid}`,
+            'X-Fantasy-Filter': JSON.stringify({
+                "teams": {
+                    "filterTeam": {
+                        "value": [ESPN_CONFIG.teamId]
+                    }
+                }
+            })
+        }
+    });
+    
+    if (!response.ok) throw new Error('Failed to fetch team data');
+    
+    const data = await response.json();
+    return data.teams ? data.teams.find(team => team.id === ESPN_CONFIG.teamId) : null;
+}
+
+// Test Team Authentication
+async function testTeamAuth() {
+    if (!espnAuth.isAuthenticated) {
+        showEnhancedStatus('❌ Please authenticate first', 'error');
+        return;
+    }
+    
+    try {
+        showEnhancedStatus('🧪 Testing your team access...', 'loading');
+        
+        // Test various endpoints
+        const [teamData, rosterData, draftData] = await Promise.all([
+            fetchMyTeamData(),
+            fetchMyRoster(),
+            fetchDraftStatus()
+        ]);
+        
+        const results = {
+            team: teamData ? '✅' : '❌',
+            roster: rosterData ? '✅' : '❌',
+            draft: draftData ? '✅' : '❌'
+        };
+        
+        showEnhancedStatus(
+            `Test Results: Team ${results.team} Roster ${results.roster} Draft ${results.draft}`, 
+            'success'
+        );
+        
+    } catch (error) {
+        showEnhancedStatus('❌ Test failed. Your cookies may have expired.', 'error');
+    }
+}
+
+// Fetch My Roster
+async function fetchMyRoster() {
+    const url = `${ESPN_CONFIG.apiBase}${ESPN_CONFIG.leagueId}?view=mRoster&view=mTeam`;
+    
+    const response = await fetch(url, {
+        headers: {
+            'Cookie': `espn_s2=${espnAuth.espn_s2}; SWID=${espnAuth.swid}`
+        }
+    });
+    
+    const data = await response.json();
+    const myTeam = data.teams?.find(team => team.id === ESPN_CONFIG.teamId);
+    return myTeam?.roster || null;
+}
+
+// Fetch Draft Status
+async function fetchDraftStatus() {
+    const url = `${ESPN_CONFIG.apiBase}${ESPN_CONFIG.leagueId}?view=mDraftDetail`;
+    
+    const response = await fetch(url, {
+        headers: {
+            'Cookie': `espn_s2=${espnAuth.espn_s2}; SWID=${espnAuth.swid}`
+        }
+    });
+    
+    const data = await response.json();
+    return data.draftDetail || null;
+}
+
+// Open Mock Draft in ESPN
+function openMockDraft() {
+    const mockDraftUrl = `https://fantasy.espn.com/football/draft?leagueId=${ESPN_CONFIG.leagueId}`;
+    window.open(mockDraftUrl, '_blank');
+    showEnhancedStatus('🎯 Mock draft opened! Use both windows together.', 'success');
+}
+
+// Enable Team-Specific Features
+function enableTeamFeatures() {
+    // Add team-specific UI elements
+    addMyTeamPanel();
+    
+    // Enable draft integration
+    enableDraftIntegration();
+    
+    // Start monitoring my picks
+    startTeamMonitoring();
+}
+
+// Add My Team Panel
+function addMyTeamPanel() {
+    const sidebar = document.querySelector('.space-y-6');
+    if (!sidebar) return;
+    
+    const teamPanel = `
+        <div id="myTeamPanel" class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold mb-4">👤 My ESPN Team</h3>
+            <div id="myTeamInfo" class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <span>Team:</span>
+                    <span id="teamName" class="font-medium">Team 9</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Status:</span>
+                    <span id="authStatus" class="font-medium text-green-600">Authenticated</span>
+                </div>
+            </div>
+            
+            <div class="mt-4 space-y-2">
+                <button onclick="syncESPNRoster()" class="w-full p-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+                    🔄 Sync ESPN Roster
+                </button>
+                <button onclick="openMyTeam()" class="w-full p-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm">
+                    👥 View My Team on ESPN
+                </button>
+            </div>
+        </div>
+    `;
+    
+    sidebar.insertAdjacentHTML('afterbegin', teamPanel);
+}
+
+// Sync ESPN Roster with Local Data
+async function syncESPNRoster() {
+    if (!espnAuth.isAuthenticated) return;
+    
+    try {
+        const roster = await fetchMyRoster();
+        if (roster && roster.entries) {
+            // Clear current team and sync with ESPN
+            myTeam = [];
+            
+            roster.entries.forEach(entry => {
+                const player = entry.playerPoolEntry?.player;
+                if (player) {
+                    const localPlayer = players.find(p => 
+                        p.name.includes(player.fullName) || 
+                        player.fullName.includes(p.name)
+                    );
+                    
+                    if (localPlayer) {
+                        myTeam.push(localPlayer);
+                    }
+                }
+            });
+            
+            // Update UI
+            if (window.updateMyTeam) {
+                window.updateMyTeam();
+            }
+            
+            showEnhancedStatus(`✅ Synced ${myTeam.length} players from ESPN`, 'success');
+        }
+    } catch (error) {
+        showEnhancedStatus('❌ Sync failed', 'error');
+    }
+}
+
+// Open My Team on ESPN
+function openMyTeam() {
+    const teamUrl = `https://fantasy.espn.com/football/team?leagueId=${ESPN_CONFIG.leagueId}&teamId=${ESPN_CONFIG.teamId}`;
+    window.open(teamUrl, '_blank');
+}
+
+// Start Team Monitoring
+function startTeamMonitoring() {
+    // Monitor for draft updates specific to your team
+    setInterval(async () => {
+        if (espnAuth.isAuthenticated) {
+            try {
+                await checkForMyPicks();
+            } catch (error) {
+                console.warn('Team monitoring error:', error);
+            }
+        }
+    }, 5000); // Check every 5 seconds during draft
+}
+
+// Check for My Picks
+async function checkForMyPicks() {
+    const draftStatus = await fetchDraftStatus();
+    if (!draftStatus || !draftStatus.picks) return;
+    
+    const myPicks = draftStatus.picks.filter(pick => pick.teamId === ESPN_CONFIG.teamId);
+    
+    // Update local team with my actual picks
+    myPicks.forEach(pick => {
+        const playerName = getPlayerNameById(pick.playerId);
+        if (playerName) {
+            const player = players.find(p => p.name === playerName);
+            if (player && !myTeam.find(t => t.name === playerName)) {
+                myTeam.push(player);
+                showNotification(`✅ Confirmed pick: ${playerName}`);
+            }
+        }
+    });
+}
+
+// Enhanced Status Display
+function showEnhancedStatus(message, type) {
+    const statusEl = document.getElementById('enhancedAuthStatus');
+    if (statusEl) {
+        statusEl.textContent = message;
+        statusEl.className = `text-sm ${
+            type === 'success' ? 'text-green-600' : 
+            type === 'error' ? 'text-red-600' : 
+            'text-blue-600'
+        }`;
+    }
+}
+
+// Auto-load saved authentication
+function loadSavedAuth() {
+    const saved = localStorage.getItem('espn_team_auth');
+    if (saved) {
+        const auth = JSON.parse(saved);
+        
+        // Check if auth is less than 24 hours old
+        if (Date.now() - auth.timestamp < 24 * 60 * 60 * 1000) {
+            document.getElementById('enhancedEspnS2').value = auth.espn_s2;
+            document.getElementById('enhancedSwid').value = auth.swid;
+            showEnhancedStatus('🔄 Saved authentication found. Click "Login as Team 9" to restore.', 'info');
+        }
+    }
+}
+
+// Initialize Enhanced Authentication
+function initEnhancedAuth() {
+    addEnhancedESPNAuth();
+    
+    // Load saved auth after UI is added
+    setTimeout(loadSavedAuth, 100);
+    
+    console.log('Enhanced ESPN Authentication loaded for Team 9!');
+}
+
+// Auto-initialize
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initEnhancedAuth);
+} else {
+    initEnhancedAuth();
+}
+
+// Export for manual access
+window.ESPN_Team = {
+    authenticate: authenticateAsTeam9,
+    test: testTeamAuth,
+    sync: syncESPNRoster,
+    isAuthenticated: () => espnAuth.isAuthenticated,
+    getTeamData: () => espnAuth.userTeam
+};
     </script>
 </body>
 </html>
