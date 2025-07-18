@@ -1331,6 +1331,95 @@ window.ESPN_Team = {
     isAuthenticated: () => espnAuth.isAuthenticated,
     getTeamData: () => espnAuth.userTeam
 };
+        // Manual ESPN Integration - Add this to your existing script section
+function addManualESPNSync() {
+    const manualSection = `
+        <div class="mt-6 p-4 bg-green-50 rounded-lg">
+            <h3 class="text-lg font-semibold mb-4">🏈 ESPN Manual Sync (Works 100%)</h3>
+            <p class="text-sm mb-4 text-gray-700">Chrome blocks ESPN cookies, so we'll sync manually:</p>
+            
+            <div class="space-y-3">
+                <button onclick="openESPNMock()" class="w-full p-3 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium">
+                    🎯 Open ESPN Mock Draft (New Window)
+                </button>
+                
+                <div class="bg-white p-3 rounded border">
+                    <label class="block text-sm font-medium mb-2">When you draft a player on ESPN, add them here:</label>
+                    <div class="flex space-x-2">
+                        <input id="draftedPlayer" type="text" placeholder="Enter player name" class="flex-1 p-2 border rounded">
+                        <button onclick="addDraftedPlayer()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                            Add to My Team
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="bg-yellow-50 p-3 rounded">
+                    <h4 class="font-medium text-sm mb-2">📝 Draft Workflow:</h4>
+                    <ol class="text-xs space-y-1">
+                        <li>1. Click "Open ESPN Mock Draft" above</li>
+                        <li>2. Use THIS tool to see recommendations</li>
+                        <li>3. Make pick on ESPN window</li>
+                        <li>4. Type player name above and click "Add to My Team"</li>
+                        <li>5. Repeat for each pick</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add to settings panel
+    const settings = document.getElementById('settings');
+    if (settings) {
+        settings.insertAdjacentHTML('beforeend', manualSection);
+    }
+}
+
+// Open ESPN Mock Draft
+function openESPNMock() {
+    const espnUrl = 'https://fantasy.espn.com/football/draft?leagueId=1505348419';
+    window.open(espnUrl, '_blank', 'width=1200,height=800');
+    alert('ESPN opened! Use both windows side by side for drafting.');
+}
+
+// Add drafted player manually
+function addDraftedPlayer() {
+    const playerName = document.getElementById('draftedPlayer').value.trim();
+    if (!playerName) return;
+    
+    // Find player in our database
+    const player = players.find(p => 
+        p.name.toLowerCase().includes(playerName.toLowerCase()) ||
+        playerName.toLowerCase().includes(p.name.toLowerCase())
+    );
+    
+    if (player) {
+        // Check if already on team
+        if (!myTeam.find(t => t.name === player.name)) {
+            myTeam.push(player);
+            updateMyTeam(); // Your existing function
+            document.getElementById('draftedPlayer').value = '';
+            
+            // Show success
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-green-600 text-white p-3 rounded shadow-lg z-50';
+            notification.textContent = `✅ Added ${player.name} to your team!`;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+            
+            // Re-render players list
+            if (window.renderPlayers) renderPlayers();
+        } else {
+            alert('Player already on your team!');
+        }
+    } else {
+        alert(`Player "${playerName}" not found. Try typing just the last name.`);
+    }
+}
+
+// Initialize manual sync
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(addManualESPNSync, 1000); // Add after page loads
+});
     </script>
 </body>
 </html>
