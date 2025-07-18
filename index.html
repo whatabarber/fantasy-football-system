@@ -304,9 +304,10 @@ const samplePlayers = [
 ];
         // Initialize app
         async function init() {
-            try {
-                // Try to fetch live data, fallback to sample
-                players = await fetchLiveData() || samplePlayers;
+    try {
+        // Force use sample data for now
+        players = samplePlayers;
+        console.log('Using updated 2025 sample data');
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('app').style.display = 'block';
                 updateLastUpdated();
