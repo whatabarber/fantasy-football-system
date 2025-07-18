@@ -251,6 +251,25 @@
         let dkLineup = [];
         let activeTab = 'rankings';
 
+        // Get real ADP data from FantasyPros
+async function fetchRealADP() {
+    try {
+        // This will get the actual FantasyPros ADP data
+        const proxyUrl = 'https://api.allorigins.win/get?url=';
+        const fantasyprosUrl = 'https://www.fantasypros.com/nfl/adp/overall.php';
+        
+        const response = await fetch(proxyUrl + encodeURIComponent(fantasyprosUrl));
+        const html = await response.json();
+        
+        // Parse the HTML to extract player data
+        const players = parseFantasyProsHTML(html.contents);
+        return players;
+    } catch (error) {
+        console.error('Failed to fetch real ADP:', error);
+        return null;
+    }
+}
+
         // Updated 2025 Fantasy Football Rankings - Real Players
 const samplePlayers = [
     // Top WRs based on 2025 consensus
